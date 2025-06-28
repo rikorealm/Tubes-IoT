@@ -30,11 +30,11 @@ const Home = () => {
       const rawArray = JSON.parse(data.message); // <-- parse the string message
       const structured = {};
 
-      rawArray.forEach(({ payload_subject, content }) => {
-        structured[payload_subject] = {};
+      rawArray.forEach(({ subject, content }) => {
+        structured[subject] = {};
 
-        content.forEach(({ param_key, param_val }) => {
-          structured[payload_subject][param_key] = param_val;
+        content.forEach(({ key, val }) => {
+          structured[subject][key] = val;
         });
       });
 
@@ -47,10 +47,10 @@ const Home = () => {
   }, [data]);
 
   const pumpState = () => {
-    if (sensorData?.ultrasonic_1?.pump_state === 0) {
+    if (sensorData?.us_1?.pump === 0) {
       return 'Pump is OFF';
     }
-    else if (sensorData?.ultrasonic_1?.pump_state === 1)
+    else if (sensorData?.us_1?.pump === 1)
       return 'Pump is ON';
     else {
       return 'N/A';
@@ -58,10 +58,10 @@ const Home = () => {
   };
 
   const needLight = () => {
-    if (sensorData?.ldr_1?.need_light === 0) {
+    if (sensorData?.ldr_1?.need === 0) {
       return '🌞 Not Needed';
     }
-    else if (sensorData?.ldr_1?.need_light === 1)
+    else if (sensorData?.ldr_1?.need === 1)
       return '🌞 Needed';
     else {
       return 'N/A';
@@ -69,10 +69,10 @@ const Home = () => {
   };
 
   const fromLed = () => {
-    if (sensorData?.ldr_1?.from_led === 0) {
+    if (sensorData?.ldr_1?.led === 0) {
       return 'Light not from LED';
     }
-    else if (sensorData?.ldr_1?.from_led === 1)
+    else if (sensorData?.ldr_1?.led === 1)
       return 'Light from LED';
     else {
       return 'N/A';
@@ -125,7 +125,7 @@ const Home = () => {
               </div>
               <h4 className="text-sm font-semibold text-gray-700">Temperature</h4>
             </div>
-            <div className="text-3xl font-bold text-gray-900 mt-2"> {sensorData?.dht_1?.suhu ?? 'N/A'}°C </div>
+            <div className="text-3xl font-bold text-gray-900 mt-2"> {sensorData?.dht_1?.temp ?? 'N/A'}°C </div>
             <span className="text-xs text-gray-500 mt-1">Updated {(now && lastUpdated) ? countPassedTime(now - lastUpdated) : 'N/A'}</span>
           </div>
 
@@ -137,7 +137,7 @@ const Home = () => {
               </div>
               <h4 className="text-sm font-semibold text-gray-700">Humidity</h4>
             </div>
-            <div className="text-3xl font-bold text-gray-900 mt-2"> {sensorData?.dht_1?.kelembaban ?? 'N/A'}%</div>
+            <div className="text-3xl font-bold text-gray-900 mt-2"> {sensorData?.dht_1?.hum ?? 'N/A'}%</div>
             <span className="text-xs text-gray-500 mt-1">Updated {(now && lastUpdated) ? countPassedTime(now - lastUpdated) : 'N/A'}</span>
           </div>
 
@@ -149,7 +149,7 @@ const Home = () => {
               </div>
               <h4 className="text-sm font-semibold text-gray-700">Water Level</h4>
             </div>
-            <div className="text-3xl font-bold text-gray-900 mt-2"> {sensorData?.ultrasonic_1?.depth ?? 'N/A'} cm </div>
+            <div className="text-3xl font-bold text-gray-900 mt-2"> {sensorData?.us_1?.depth ?? 'N/A'} cm </div>
             <span className="text-xs text-gray-500 mt-1"> { pumpState() } </span>
           </div>
 
