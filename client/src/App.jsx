@@ -15,7 +15,7 @@ import Layout from './components/Layout';
 
 import LoginForm from './components/loginForm';
 import MqttDisplay from './components/MqttDisplay';
-import { DeviceDataProvider } from './contexts/deviceDataProvider';
+import { DeviceDataProvider } from './contexts/DeviceDataProvider';
 
 
 function App() {

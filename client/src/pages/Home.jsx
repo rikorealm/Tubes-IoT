@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePreferences } from '../contexts/UserContext';
-import { useDeviceData } from '../contexts/deviceDataProvider';
+import { useDeviceData } from '../contexts/DeviceDataProvider';
 import { count } from 'firebase/firestore';
 
 const Home = () => {
