@@ -118,7 +118,7 @@ export const DeviceDataProvider = ({ children }) => {
         }
 
         // Connect WebSocket immediately after backend call (no arbitrary setTimeout)
-        const socket = new WebSocket('ws://localhost:5000');
+        const socket = new WebSocket('ws://enshrined-cerulean-bulb.glitch.me');
         socketRef.current = socket; // Store the new socket instance
 
         socket.onopen = () => {

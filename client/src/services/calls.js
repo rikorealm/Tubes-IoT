@@ -63,7 +63,7 @@ export const sendDeviceIdToBackend = async (deviceId) => {
   if (user && deviceId) {
     const idToken = await user.getIdToken();
 
-    await fetch('http://localhost:5000/api/subscribe', {
+    await fetch('https://enshrined-cerulean-bulb.glitch.me/api/subscribe', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
