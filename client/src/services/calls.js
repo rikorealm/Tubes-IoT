@@ -63,7 +63,7 @@ export const sendDeviceIdToBackend = async (deviceId) => {
   if (user && deviceId) {
     const idToken = await user.getIdToken();
 
-    await fetch('https://enshrined-cerulean-bulb.glitch.me/api/subscribe', {
+    await fetch('https://tubes-iot-production.up.railway.app/api/subscribe', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
