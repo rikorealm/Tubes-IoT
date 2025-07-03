@@ -118,7 +118,7 @@ export const DeviceDataProvider = ({ children }) => {
         }
 
         // Connect WebSocket immediately after backend call (no arbitrary setTimeout)
-        const socket = new WebSocket('ws://tubes-iot-production.up.railway.app/');
+        const socket = new WebSocket('wss://tubes-iot-production.up.railway.app/');
         socketRef.current = socket; // Store the new socket instance
 
         socket.onopen = () => {
