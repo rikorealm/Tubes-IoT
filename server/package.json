@@ -10,7 +10,7 @@
     "ws": "^8.18.2"
   },
   "scripts": {
-    "start": "nodemon index.mjs"
+    "start": "node index.mjs"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
