@@ -1,23 +1,25 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { sendDeviceIdToBackend } from '../services/calls'; // Assuming this sends ID to your Node.js backend
-import { usePreferences } from './UserContext'; // Assuming this provides preferences.devices
+import { sendDeviceIdToBackend } from '../services/calls';
+import { usePreferences } from './UserContext';
 
 const DeviceDataContext = createContext();
+const server_url = "tubes-iot-production.up.railway.app/";
 
 export const DeviceDataProvider = ({ children }) => {
-  const { preferences, isLoading: preferencesLoading } = usePreferences(); // Renamed isLoading to preferencesLoading to avoid confusion
-  const deviceId = preferences.devices?.[0]?.device_id; // Get the first device ID
+  const { preferences, isLoading: preferencesLoading } = usePreferences();
+  const deviceId = preferences.devices?.[0]?.device_id;
 
   const [data, setData] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [isWebSocketConnected, setIsWebSocketConnected] = useState(false); // New state to track WS connection status
+  const [isWebSocketConnected, setIsWebSocketConnected] = useState(false);
 
   const socketRef = useRef(null);
-  const timeoutRef = useRef(null); // For any potential debouncing/retry timeouts
-  const previousDeviceIdRef = useRef(null); // Tracks the deviceId from the *last successful connection attempt*
-  const deviceWasMissingRef = useRef(false); // True if the device was just removed/missing
+  const timeoutRef = useRef(null);
+  const previousDeviceIdRef = useRef(null);
+  const deviceWasMissingRef = useRef(false);
+  const deviceWasPreviouslyDefinedRef = useRef(false);
 
-  // Restore cached data on initial load
+  //Get stored data on device id change
   useEffect(() => {
     const saved = localStorage.getItem('deviceData');
     const savedTime = localStorage.getItem('deviceLastUpdated');
@@ -35,103 +37,94 @@ export const DeviceDataProvider = ({ children }) => {
         localStorage.removeItem('deviceLastUpdated');
       }
     }
-  }, []); // Run only once on mount
+  }, [deviceId]);
 
-  // Main effect to manage WebSocket connection based on device ID changes
+  //Handle change of device id and loading of preferences (user data)
   useEffect(() => {
-    console.log('--- useEffect triggered ---');
-    console.log('Current deviceId from preferences:', deviceId);
-    console.log('Previous deviceIdRef.current:', previousDeviceIdRef.current);
-    console.log('deviceWasMissingRef.current:', deviceWasMissingRef.current);
+    const currentDeviceId = deviceId;
+    const previousDeviceId = previousDeviceIdRef.current;
+    const oldSocket = socketRef.current;
 
-    // --- Cleanup function for the effect ---
-    // This runs when the component unmounts OR when the dependencies change
-    const cleanupWebSocket = () => {
-      if (socketRef.current) {
-        console.log('Cleaning up: Closing existing WebSocket connection.');
-        socketRef.current.close(); // Close the WebSocket
-        socketRef.current = null;  // Clear the ref
-      }
-      if (timeoutRef.current) {
-        console.log('Cleaning up: Clearing timeout.');
-        clearTimeout(timeoutRef.current); // Clear any pending timeouts
-        timeoutRef.current = null;
-      }
-      setIsWebSocketConnected(false); // Reset WS connection status
-      setData(null); // Clear current data
-      setLastUpdated(null); // Clear last updated timestamp
-      localStorage.removeItem('deviceData'); // Clear localStorage
-      localStorage.removeItem('deviceLastUpdated');
-      console.log('Cleanup complete.');
-    };
-
-    // Scenario 1: No device ID is available (device removed or not yet added)
-    if (!deviceId) {
-      console.log('Scenario 1: Device ID is missing. Setting deviceWasMissingRef to true and cleaning up.');
-      deviceWasMissingRef.current = true; // Mark that device was missing
-      previousDeviceIdRef.current = null; // Ensure previous ID is cleared
-      cleanupWebSocket(); // Perform full cleanup
-      return; // Exit the effect early
-    }
-
-    // Scenario 2: Device ID is available. Determine if a new connection is needed.
-    // A new connection is needed if:
-    // a) The device was previously missing (it was just re-added).
-    // b) The current deviceId is different from the previously connected one.
-    const needsNewConnection =
-      deviceWasMissingRef.current || deviceId !== previousDeviceIdRef.current;
-
-    // If no new connection is needed, simply update previousDeviceIdRef and exit.
-    // This prevents unnecessary reconnections if the same device ID remains active.
-    if (!needsNewConnection) {
-      console.log('Scenario 2: Device ID is present and matches previous. No new connection needed.');
-      // Important: Update previousDeviceIdRef here too, in case the effect re-runs
-      // without an actual device ID change (e.g., other preference changes).
-      previousDeviceIdRef.current = deviceId;
+    if (preferencesLoading) {
+      console.log('Preferences not ready yet, skipping effect.');
       return;
     }
 
-    // If we reach here, a new connection is required.
-    console.log(`Scenario 3: New connection required for device ID: ${deviceId}.`);
-    console.log(`Reason: deviceWasMissingRef=${deviceWasMissingRef.current}, previousDeviceId=${previousDeviceIdRef.current}`);
+    if (deviceId && !deviceWasPreviouslyDefinedRef.current) {
+      deviceWasPreviouslyDefinedRef.current = true;
+    }
 
-    // Reset flags and perform cleanup before attempting new connection
-    deviceWasMissingRef.current = false; // Reset the "was missing" flag
-    cleanupWebSocket(); // Clean up any lingering old connections/data
+    //Cleans ws and local data
+    const cleanupWebSocket = ({ clearLocal = false } = {}) => {
+      if (socketRef.current && socketRef.current === oldSocket) {
+        socketRef.current.close();
+        socketRef.current = null;
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      setIsWebSocketConnected(false);
 
-    // Store the current deviceId as the 'previous' one for the next comparison
-    previousDeviceIdRef.current = deviceId;
+      
+      if (clearLocal) {
+        setData(null);
+        setLastUpdated(null);
+        localStorage.removeItem('deviceData');
+        localStorage.removeItem('deviceLastUpdated');
+      }
+    };
 
-    // --- Establish New WebSocket Connection ---
+    //Handle device deletion
+    const wasDeleted = !deviceId && deviceWasPreviouslyDefinedRef.current;
+    if (!deviceId) {
+      console.log('Device is missing.');
+      deviceWasMissingRef.current = true;
+      if (wasDeleted) {
+        console.log('Device was deleted. Clearing localStorage and state.');
+        cleanupWebSocket({ clearLocal: true });
+      } else {
+        console.log('No device ever set (e.g. on refresh). Skipping local cleanup.');
+        cleanupWebSocket({ clearLocal: false });
+      }
+      return;
+    }
+
+    //Handle if a new connection is not required
+    const needsNewConnection = deviceWasMissingRef.current || currentDeviceId !== previousDeviceId;
+    if (!needsNewConnection) {
+      console.log('Device ID is present and matches previous ID. No new connection needed.');
+      return;
+    }
+
+    //Handle if new connection is required (default) and establish new ws conn
+    deviceWasMissingRef.current = false;
     const establishWebSocketConnection = async () => {
       try {
-        console.log(`Attempting to send device ID ${deviceId} to backend...`);
-        // Assuming sendDeviceIdToBackend is an async function that might take time.
-        // Await its completion to ensure backend is ready to process this device ID.
+        console.log(`Attempt sending device ID ${deviceId} to backend...`);
         await sendDeviceIdToBackend(deviceId);
-        console.log('Device ID sent to backend successfully. Proceeding to establish WebSocket.');
-
-        // Clear any existing timeouts before setting up a new WebSocket
+        console.log('Device ID sent to backend successfully. Proceeding to establish WS.');
+        
+        //Clear timeouts
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
           timeoutRef.current = null;
         }
 
-        // Connect WebSocket immediately after backend call (no arbitrary setTimeout)
-        const socket = new WebSocket('wss://tubes-iot-production.up.railway.app/');
+        //Connect WebSocket immediately after backend call
+        const socket = new WebSocket('wss://' + server_url);
         socketRef.current = socket; // Store the new socket instance
 
         socket.onopen = () => {
-          console.log('WebSocket opened successfully. Sending deviceId to backend via WS.');
-          // Send deviceId to backend via WebSocket for subscription
+          console.log('WebSocket opened successfully. Sending device ID to backend via WS.');
           socket.send(JSON.stringify({ deviceId }));
-          setIsWebSocketConnected(true); // Update connection status
+          setIsWebSocketConnected(true);
         };
 
         socket.onmessage = (event) => {
           try {
+            //Get & parse obtained data from mqtt broker (through backend ws)
             const parsed = JSON.parse(event.data);
-            // Ensure the message has expected properties before processing
             if (parsed && typeof parsed.topic === 'string' && typeof parsed.message !== 'undefined') {
               const { topic, message } = parsed;
               const timestamp = Date.now();
@@ -151,45 +144,39 @@ export const DeviceDataProvider = ({ children }) => {
 
         socket.onerror = (err) => {
           console.error('WebSocket error:', err);
-          setIsWebSocketConnected(false); // Update connection status on error
-          // Consider implementing a retry mechanism here if desired
+          setIsWebSocketConnected(false);
         };
 
         socket.onclose = (event) => {
           console.log('WebSocket closed:', event.code, event.reason);
-          // Only clear the ref if it's the specific socket instance that just closed
           if (socketRef.current === socket) {
             socketRef.current = null;
-            setIsWebSocketConnected(false); // Update connection status
+            setIsWebSocketConnected(false);
           }
         };
 
       } catch (error) {
         console.error('Failed to send device ID to backend or establish WebSocket:', error);
-        setIsWebSocketConnected(false); // Ensure status is false on error
-        // Implement a retry with exponential backoff if this is a transient error
-        // For now, just log and stop.
+        setIsWebSocketConnected(false);
       }
     };
-
-    // Call the async function to establish connection
     establishWebSocketConnection();
-
-    // The return of useEffect is its cleanup function
+    
     return () => {
-      console.log('--- useEffect cleanup return ---');
       const nextDeviceId = preferences.devices?.[0]?.device_id;
-      if (nextDeviceId !== previousDeviceIdRef.current || deviceWasMissingRef.current) {
+      //Compare with previousDeviceId we saved to check whether data reset is needed
+      if (nextDeviceId !== previousDeviceId || deviceWasMissingRef.current) {
         console.log('Cleanup is required due to deviceId change or device reappearance.');
-        cleanupWebSocket();
+        cleanupWebSocket({ clearLocal: true });
       } else {
         console.log('Skipping cleanup: deviceId unchanged and device was not missing.');
       }
+      //Update the previous ref
+      previousDeviceIdRef.current = currentDeviceId;
     };
 
-  }, [preferences.devices]); // Dependency array: re-run this effect when preferences.devices changes
+  }, [preferences.devices, preferencesLoading]);
 
-  // Optional: Provide loading state or connection status
   const isLoading = preferencesLoading || (deviceId && !isWebSocketConnected && !data);
 
   return (

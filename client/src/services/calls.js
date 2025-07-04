@@ -1,6 +1,8 @@
 import { doc, setDoc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
+const server_url = 'https://tubes-iot-production.up.railway.app/';
+
 export const saveUserPreferences = async (prefs) => {
   const user = auth.currentUser;
   if (!user) throw new Error('No user is logged in.');
@@ -20,7 +22,6 @@ export const updateDevicesData = async (devices) => {
     updatedAt: new Date()
   });
 };
-
 
 export const getUserPreferences = async () => {
   const user = auth.currentUser;
@@ -42,7 +43,6 @@ export const subscribeToUserPreferences = (callback) => {
 
   const userDocRef = doc(db, 'users', user.uid);
 
-  // Listen to real-time updates
   const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
     if (docSnap.exists()) {
       const data = docSnap.data();
@@ -54,7 +54,7 @@ export const subscribeToUserPreferences = (callback) => {
     console.error('Error fetching user preferences in real-time:', error);
   });
 
-  return unsubscribe; // Call this to stop listening
+  return unsubscribe;
 };
 
 export const sendDeviceIdToBackend = async (deviceId) => {
@@ -63,7 +63,7 @@ export const sendDeviceIdToBackend = async (deviceId) => {
   if (user && deviceId) {
     const idToken = await user.getIdToken();
 
-    await fetch('https://tubes-iot-production.up.railway.app/api/subscribe', {
+    await fetch(server_url + 'api/subscribe', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -73,7 +73,7 @@ export const sendDeviceIdToBackend = async (deviceId) => {
     });
   }
   else {
-    console.warn("User not authenticated or deviceId missing.");
+    console.warn("User unauthenticated or deviceId missing.");
   }
 };
 

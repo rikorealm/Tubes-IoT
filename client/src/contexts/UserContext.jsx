@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState, startTransition } from 'react';
-import { saveUserPreferences, getUserPreferences, subscribeToUserPreferences } from '../services/calls';
-import { sendDeviceIdToBackend } from '../services/calls';
+import { subscribeToUserPreferences } from '../services/calls';
 
 const PreferenceContext = createContext();
 
@@ -21,7 +20,6 @@ export const PreferenceProvider = ({ children }) => {
                             setTimeout(() => {
                                 setPreferences(prefs);
                                 setDeviceAvailability(prefs.devices?.length > 0);
-                                console.log(prefs.devices[0].device_id);
                             }, 600);
                         }
                     );
@@ -41,7 +39,7 @@ export const PreferenceProvider = ({ children }) => {
         init();
 
         return () => {
-            if (unsubscribe) unsubscribe(); // Clean up listener on unmount
+            if (unsubscribe) unsubscribe();
         };
     }, []);
 

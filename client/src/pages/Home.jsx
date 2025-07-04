@@ -9,11 +9,7 @@ const Home = () => {
   const [sensorData, setSensorData] = useState({});
   const [now, setNow] = useState(Date.now());
 
-  // const deviceId = preferences?.devices?.[0]?.device_id;
-
   const { data, lastUpdated }  = useDeviceData();
-
-  console.log("data: ", data);
 
   const navigate = useNavigate();
 
@@ -22,12 +18,11 @@ const Home = () => {
     return () => clearInterval(interval);
   }, []);
 
-
   useEffect(() => {
     if (!data?.message) return;
 
     try {
-      const rawArray = JSON.parse(data.message); // <-- parse the string message
+      const rawArray = JSON.parse(data.message);
       const structured = {};
 
       rawArray.forEach(({ subject, content }) => {
@@ -39,7 +34,7 @@ const Home = () => {
       });
 
       setSensorData(structured);
-      console.log("struct: ", structured);
+      console.log("Data: ", structured);
 
     } catch (err) {
       console.error('Error parsing message:', err);
