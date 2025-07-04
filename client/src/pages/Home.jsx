@@ -2,10 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePreferences } from '../contexts/UserContext';
 import { useDeviceData } from '../contexts/DeviceDataProvider';
-import { count } from 'firebase/firestore';
 
 const Home = () => {
-  const { preferences, deviceAvailability, isLoading } = usePreferences();
+  const { deviceAvailability, isLoading } = usePreferences();
   const [sensorData, setSensorData] = useState({});
   const [now, setNow] = useState(Date.now());
 

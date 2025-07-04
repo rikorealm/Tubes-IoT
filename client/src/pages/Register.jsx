@@ -23,11 +23,12 @@ const Register = () => {
       await setDoc(doc(db, 'users', credential.user.uid), {
         name,
         email,
-        preferences: {},
+        preferences: {devices:[]},
         createdAt: new Date(),
       });
 
       navigate('/login');
+      
     } catch (err) {
       alert(err.message);
     }
