@@ -13,8 +13,6 @@ import PublicRoute from './components/PublicRoute';
 import { PreferenceProvider } from './contexts/UserContext';
 import Layout from './components/Layout';
 
-import LoginForm from './components/loginForm';
-import MqttDisplay from './components/MqttDisplay';
 import { DeviceDataProvider } from './contexts/DeviceDataProvider';
 
 
